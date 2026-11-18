@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a crash, a wrong size, or an unexpected skip in the cache cleaner.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please redact absolute user paths and never paste
+        anything from `credentials/`. If a cleanup removed data it should have
+        kept, stop here and use a private security advisory instead.
+  - type: input
+    id: version
+    attributes:
+      label: dsh-cache-cleaner version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: dsh
+    attributes:
+      label: DSH desktop version and OS
+      placeholder: DSH desktop 0.x.y, Windows 11
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did it happen?
+      options:
+        - Settings page (缓存清理 / Cache Cleaner)
+        - Agent tool cache_scan
+        - Agent tool cache_clean
+        - HTTP route
+        - Install / uninstall
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Affected target ids
+      placeholder: dsh-prepared-shells, dsh-electron-gpu-cache
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what did you get?
+      placeholder: I ran cache_scan with olderThanHours null and the total said 1.5 GB but the row said 786 MB…
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Report / error output
+      description: Paste the tool output or the JSON envelope, redacted.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else

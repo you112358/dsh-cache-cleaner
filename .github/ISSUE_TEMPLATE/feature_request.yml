@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a new cache target, a new option, or an integration.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New cache targets are the most common request. To keep the plugin safe,
+        every target must be **rebuildable on demand** and located under one of
+        the declared roots (`~/.dsh`, the OS temp dir, the desktop client
+        userData, the updater dir, `~/.cc-safety-net`).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of request
+      options:
+        - New cache target
+        - New cleaning option / age policy
+        - UI improvement
+        - Tool / API change
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: Which disk usage are you trying to reclaim, or what is awkward today?
+    validations:
+      required: true
+  - type: textarea
+    id: target
+    attributes:
+      label: For a cache target - where does it live and how is it rebuilt?
+      description: Exact directory (relative to the home dir or %TEMP%), who writes it, and which action recreates it.
+      placeholder: |
+        ~/.dsh/dsh-ops/foo-cache - written by the foo command, recreated on next use
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: The proposed target contains no user data (sessions, attachments, profiles, credentials).
+          required: true
