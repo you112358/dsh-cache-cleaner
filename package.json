@@ -42,6 +42,7 @@
     "lib/**/*.js",
     "client/client.js",
     "assets/icon.svg",
+    "assets/icon-180.png",
     "locale/*.json",
     "cordis.patch.yml",
     "README.md",
