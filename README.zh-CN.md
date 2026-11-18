@@ -175,6 +175,13 @@ node scripts/check-client.mjs                  # client bundle 结构自检（�
 - 桌面客户端目标按 Electron / Windows 目录布局断言；其他平台未验证——目录不存在时行留空，不去猜路径。
 - 不联网、不起定时器、不做后台任务：只有被调用时才扫描。
 
+## 相关链接
+
+- [最新版本](https://github.com/you112358/dsh-cache-cleaner/releases/latest)——发布说明与安装命令
+- [贡献指南](CONTRIBUTING.md)——新增清理目标、检查命令与 PR 规则
+- [问题反馈](https://github.com/you112358/dsh-cache-cleaner/issues)——Bug 与清理目标建议
+- [更新日志](https://github.com/you112358/dsh-cache-cleaner/releases)
+
 ## 许可
 
 MIT © 2026 you112358

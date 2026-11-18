@@ -175,6 +175,13 @@ node scripts/check-client.mjs                 # structural check of the client b
 - Desktop client targets assume the Electron/Windows layout; other platforms are untested — the rows stay empty rather than guessing paths.
 - No network access, no timers, no background work: scans run only when called.
 
+## Links
+
+- [Latest release](https://github.com/you112358/dsh-cache-cleaner/releases/latest) — release notes and install instructions
+- [Contributing](CONTRIBUTING.md) — adding a cache target, checks, pull request rules
+- [Issues](https://github.com/you112358/dsh-cache-cleaner/issues) — bug reports and cache-target requests
+- [Changelog](https://github.com/you112358/dsh-cache-cleaner/releases)
+
 ## License
 
 MIT © 2026 you112358
