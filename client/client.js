@@ -101,6 +101,8 @@ window.__ModuleLoader__.load({
         staleWeek: '仅清理 7 天前的',
         modeHintWeek: '只删除最近 7 天没有改动过的缓存，活跃缓存会保留。',
         modeHintAll: '包括刚刚写入的缓存，删除后会在需要时自动重建。',
+        recentKept: '近期写入 {size}，保留',
+        zeroHint: '最近 7 天内没有可清理的缓存，近期写入的 {size} 会保留；切换到「全部缓存」可查看完整占用。',
       },
       en: {
         nav: 'Cache cleaner',
@@ -130,6 +132,8 @@ window.__ModuleLoader__.load({
         staleWeek: 'only 7+ days old',
         modeHintWeek: 'Only caches untouched for the last week are removed; live caches stay.',
         modeHintAll: 'Includes caches written seconds ago; they are rebuilt on demand.',
+        recentKept: '{size} written recently, kept',
+        zeroHint: 'Nothing is old enough to clean: {size} written in the last week is kept. Switch to “Everything” to see the full footprint.',
       },
     }
 
@@ -300,14 +304,15 @@ window.__ModuleLoader__.load({
 
         var modeState = React.useState(function () {
           var policy = scanCache && scanCache.agePolicy
-          return policy && policy.key === 'all' ? 'all' : 'week'
+          if (policy && policy.key === 'custom') return 'week'
+          return 'all'
         })
         var mode = modeState[0]
         var setMode = modeState[1]
 
         var runScan = React.useCallback(
           function (nextMode) {
-            var active = nextMode || mode
+            var active = nextMode === 'week' || nextMode === 'all' ? nextMode : mode
             setLoading(true)
             setError(null)
             return post('scan', {
@@ -434,7 +439,9 @@ window.__ModuleLoader__.load({
                     'span',
                     { key: 'size', className: 'dcc-size' },
                     empty
-                      ? dict.empty
+                      ? row.freshBytes
+                        ? fmt(dict.recentKept, { size: humanBytes(row.freshBytes) })
+                        : dict.empty
                       : humanBytes(row.bytes) + ' · ' + fmt(dict.files, { n: row.files }),
                   ),
                 ]),
@@ -476,7 +483,9 @@ window.__ModuleLoader__.load({
                   key: 'rescan',
                   type: 'button',
                   className: 'dcc-btn',
-                  onClick: runScan,
+                  onClick: function () {
+                    runScan()
+                  },
                   disabled: loading || busy,
                 },
                 loading ? dict.rescanning : dict.rescan,
@@ -548,6 +557,15 @@ window.__ModuleLoader__.load({
           ),
         )
         children.push(h('p', { key: 'hint', className: 'dcc-hint' }, dict.hint))
+        if (scan && scan.totals && scan.totals.bytes === 0 && scan.totals.freshBytes > 0) {
+          children.push(
+            h(
+              'p',
+              { key: 'zero', className: 'dcc-hint' },
+              fmt(dict.zeroHint, { size: humanBytes(scan.totals.freshBytes) }),
+            ),
+          )
+        }
         if (error) {
           children.push(
             h('div', { key: 'error', className: 'dcc-banner', 'data-tone': 'error' }, error),

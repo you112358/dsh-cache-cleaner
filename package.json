@@ -1,6 +1,6 @@
 {
   "name": "dsh-cache-cleaner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "A DeepSeek Harness plugin that reclaims the rebuildable caches of DSH itself, the desktop client and installed plugins.",

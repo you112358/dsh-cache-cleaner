@@ -92,9 +92,11 @@ Requests must pass Connection's Host/Origin and browser-authentication checks (a
 | --- | --- | --- | --- |
 | Only a week old | 仅 7 天前的 / 7+ days old | `168` | only entries untouched for the last 7 days |
 | Everything | 全部缓存 / Everything | `null` | every entry, including caches written seconds ago |
-| Per-target default | (initial state) | omitted | the target's own cutoff — 6 h for temp targets, none elsewhere |
+| Per-target default | (tool/route default) | omitted | the target's own cutoff — 6 h for temp targets, none elsewhere |
 
 "Everything" never widens the *target list*: only the declared roots below are considered, and protected subtrees stay protected. Entries that are still open in a running process are reported as skipped, never forced.
+
+The settings page opens in **Everything** mode so the inventory is always visible. Under **Only a week old**, recently written caches are not hidden: they are labeled `written recently, kept` with their size, and the page keeps the filter explanation visible.
 
 ## What it cleans
 
