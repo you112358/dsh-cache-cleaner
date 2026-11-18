@@ -23,3 +23,5 @@ jobs:
         run: node -e "import('./lib/index.js').then((m) => console.log('host ok:', m.name, m.inject.join(',')))"
       - name: Structural check of the client bundle
         run: node scripts/check-client.mjs
+      - name: Behavioural check of the settings page
+        run: node scripts/check-client-behavior.mjs
