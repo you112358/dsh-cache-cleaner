@@ -1,0 +1,60 @@
+{
+  "name": "dsh-cache-cleaner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A DeepSeek Harness plugin that reclaims the rebuildable caches of DSH itself, the desktop client and installed plugins.",
+  "license": "MIT",
+  "author": "you112358",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/you112358/dsh-cache-cleaner.git"
+  },
+  "homepage": "https://github.com/you112358/dsh-cache-cleaner#readme",
+  "bugs": {
+    "url": "https://github.com/you112358/dsh-cache-cleaner/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cache",
+    "cleaner",
+    "disk-space",
+    "electron"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./icon": "./assets/icon.svg",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "icon": "./assets/icon.svg",
+  "scripts": {
+    "check": "node scripts/check-client.mjs"
+  },
+  "files": [
+    "lib/**/*.js",
+    "client/client.js",
+    "assets/icon.svg",
+    "locale/*.json",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    },
+    "manifestVersion": 1
+  }
+}

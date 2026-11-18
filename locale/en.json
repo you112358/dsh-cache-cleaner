@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Cache Cleaner",
+    "description": "Reclaim disk space from rebuildable caches and temporary files without touching sessions, attachments or plugins."
+  }
+}

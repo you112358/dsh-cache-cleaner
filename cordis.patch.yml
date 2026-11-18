@@ -1,0 +1,9 @@
+# dsh-cache-cleaner bundle patch
+#
+# Single `insert` of the plugin row, exactly like a bundle layer: the Host half
+# (the cleaner, its two agent tools and the HTTP route) mounts from here, while
+# the browser half is discovered through `dsh.client` + the `./client` export.
+- insert:
+    - id: dsh-cache-cleaner
+      name: 'dsh-cache-cleaner'
+      config: {}
