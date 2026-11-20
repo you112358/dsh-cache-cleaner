@@ -25,3 +25,11 @@ jobs:
         run: node scripts/check-client.mjs
       - name: Behavioural check of the settings page
         run: node scripts/check-client-behavior.mjs
+      - name: Syntax check the Host modules
+        run: for file in lib/*.js; do node --check "$file"; done
+      - name: Safety fence check
+        run: node scripts/check-safety.mjs
+      - name: Plugin cache discovery check
+        run: node scripts/check-plugin-caches.mjs
+      - name: Real cleanup check
+        run: node scripts/check-clean-real.mjs

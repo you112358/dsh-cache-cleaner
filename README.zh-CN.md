@@ -6,11 +6,11 @@
 
 DSH 会留下大量派生数据：请求图片、会话语义投影缓存、预编译 shell、Chromium 缓存、下载的安装包、插件编译缓存。它们都不是用户数据，也都能按需重建，但分散在 DSH 主目录、系统临时目录、Electron userData 目录和各插件目录里——于是要么留下几个 GB，要么删错东西。
 
-这个插件把边界写死：13 个可审查的清理目标，加上一圈保护栏，圈住绝不能删的数据。
+这个插件把边界写死：11 个可审查的清理目标，加上一圈保护栏，圈住绝不能删的数据。
 
 ## 特性
 
-- **13 个精选目标**，分四组：DSH 本体、临时文件、桌面客户端、插件缓存。
+- **11 个精选目标**，分四组：DSH 本体、临时文件、桌面客户端、插件缓存。
 - **一份实现、三个入口**——Agent 工具、设置页、HTTP 路由都调用同一个 Host 服务。
 - **两种时间策略**——只清 7 天前的，或全部清理；另有逐目标默认值（临时目标保留最近 6 小时）。
 - **默认即安全**——根目录白名单、保护区、不跟随符号链接、占用中的文件只报告不强删、删除前可 dry-run。
@@ -100,12 +100,11 @@ POST /dsh-cache-cleaner/api/clean  { "ids": string[], "dryRun"?: boolean, "older
 
 ## 清理目标
 
-13 个目标在设置页默认全部勾选，也可以一键全清。
+11 个目标在设置页默认勾选（只有有数据的行才会被选上），列表提供**全选 / 全不选**按钮和「已选 n/m 项」计数，因此既能整组清理，也能只清明确选中的几项。
 
 | id | 分组 | 范围 | 需重启 |
 | --- | --- | --- | --- |
 | `dsh-request-images` | DSH 本体 | `~/.dsh/cache/attachments/request-images` | 否 |
-| `dsh-session-projections` | DSH 本体 | `~/.dsh/storages/session_projcache`（可重建投影） | 否 |
 | `dsh-prepared-shells` | DSH 本体 | `~/.dsh/dsh-ops/shells/niubash-prepared`（预编译 shell 落盘） | 否 |
 | `dsh-temp-subprocess` | 临时文件 | `%TEMP%/dsh-subprocess-*` | 否 |
 | `dsh-temp-spill` | 临时文件 | `%TEMP%/dsh-spill-*` | 否 |
@@ -115,19 +114,34 @@ POST /dsh-cache-cleaner/api/clean  { "ids": string[], "dryRun"?: boolean, "older
 | `dsh-electron-gpu-cache` | 桌面客户端 | GPU / 着色器缓存（GrShaderCache、GPUCache、ShaderCache、Dawn*Cache） | 是 |
 | `dsh-electron-logs` | 桌面客户端 | 客户端日志 | 否 |
 | `dsh-updater-cache` | 桌面客户端 | 下载的安装包 / blockmap | 否 |
-| `dsh-plugin-context-overview` | 插件缓存 | billion-context 总览缓存 | 否 |
-| `dsh-plugin-cc-safety-net` | 插件缓存 | cc-safety-net 编译缓存 + 日志 | 否 |
+| `plugin-caches` | 插件缓存 | 从当前 profile 自动发现——见下 | 否 |
 
 桌面客户端与更新器两行指向标准 Electron userData / updater 位置；目录不存在的平台上这些行显示为空，而不是去猜路径。
 
+### 插件缓存（自动发现）
+
+每台机器安装的插件不同，所以这一行不是固定列表，而是在扫描时从当前 profile（`DSH_PROFILE_DIR`）现场发现：
+
+1. **插件声明的缓存**——插件可在自己的 `package.json` 里写 `dsh.cache`，值为字符串、数组，或 `{ "path": …, "mode": "contents" | "entry" }`。路径可以是绝对路径、以 `~` 开头，或相对于该插件的数据目录。声明路径必须是该插件自身数据根目录的子目录（`~/.<name>`、`%LOCALAPPDATA%/<name>`、`%LOCALAPPDATA%/dsh-<name>`、`<DSH_HOME>/<name>`）；指向安装包内部或别处的声明一律拒绝。
+2. **约定命名的缓存**——上述数据根目录下直接名为 `cache`、`.cache`、`compile-cache`、`logs`、`tmp` 的子目录。
+
+```json
+{
+  "name": "my-plugin",
+  "dsh": { "cache": ["~/.my-plugin/cache", { "path": "tmp/thumbs", "mode": "contents" }] }
+}
+```
+
+发现是尽力而为的：数据放在非常规位置的插件不会被猜着清理，只会保持不可见。`pluginCacheDiscovery: false` 只保留声明路径，`pluginCacheExtraPaths` 可追加明确位置。
+
 ## 安全模型
 
-- **只触碰声明的根目录**：DSH 主目录、系统临时目录、桌面客户端 userData、更新器目录、`~/.cc-safety-net`。
+- **只触碰声明的根目录**：DSH 主目录、系统临时目录、桌面客户端 userData、更新器目录（仅其内容），以及用户主目录或 `%LOCALAPPDATA%` 下各插件的数据根目录。
 - **永不触碰**：`sessions/`、`attachments/`、`profiles/`、`rewind-snapshots/`、`llm-deepseek/`、`dsh-runtimes/`、`skills/`、`credentials/`，以及客户端的 Local Storage / Session Storage / Network / IndexedDB / cookies。
 - **不跟随符号链接**。
 - **默认按时间保守清理**：逐目标策略下，比阈值（6 小时，可配置）更新的文件会被跳过；"7 天"把阈值放宽到 168 小时，"全部"则完全取消时间过滤。
-- **占用中的文件只报告**：EBUSY/EPERM 重试一次后记为 `skipped`，不强删。
-- **已安装插件的 `node_modules` 不是缓存**，永不删除。
+- **占用中的文件只报告**：EBUSY/EPERM 等会重试几次（80 ms、200 ms），仍占用则记为 `skipped`，不强删。
+- **已安装插件的 `node_modules` 不是缓存**，永不删除；被发现的插件缓存必须位于安装包之外。
 - **先预览**：`cache_clean { dryRun: true }` 只统计不删除。
 
 ## 配置
@@ -138,6 +152,8 @@ POST /dsh-cache-cleaner/api/clean  { "ids": string[], "dryRun"?: boolean, "older
 | --- | --- | --- |
 | `staleHours` | `6` | `staleHours: 'config'` 的目标（临时/落盘类）使用的阈值 |
 | `targets` | 全部 | id 白名单，供嵌入和自定义场景使用 |
+| `pluginCacheDiscovery` | `true` | 是否扫描各插件数据根下约定命名的缓存目录 |
+| `pluginCacheExtraPaths` | `[]` | 追加到 `plugin-caches` 行的额外绝对路径或 `~` 路径 |
 
 bundle 行的 `config` 会原样传入，例如：
 

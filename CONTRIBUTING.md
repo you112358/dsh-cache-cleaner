@@ -45,6 +45,12 @@ Edit `lib/targets.js` and add one entry:
 Then update both READMEs (target table) and run the checks below. A pull request
 that adds a target should mention the path it touches and what recreates it.
 
+Plugin caches are **not** added here: `lib/plugin-caches.js` discovers them from
+the active profile by reading each installed plugin's `dsh.cache` manifest field
+plus conventionally named cache directories next to that plugin's data roots. If
+you maintain a plugin, declare its cache there instead of hardcoding an adapter
+in this repository — one manifest field covers every user of that plugin.
+
 ## Development setup
 
 ```bash

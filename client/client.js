@@ -58,6 +58,13 @@ window.__ModuleLoader__.load({
       '.dcc-mode[data-active="true"]{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-weight:600}',
       '.dcc-mode:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}',
       '.dcc-mode:disabled{opacity:.5;cursor:default}',
+      '.dcc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+      '.dcc-toolbar-actions{display:flex;gap:12px;align-items:center}',
+      '.dcc-linkbtn{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--dsw-alias-brand-primary);font:inherit;font-size:12px;line-height:1.4;padding:2px 0;cursor:pointer}',
+      '.dcc-linkbtn:hover:not(:disabled){text-decoration:underline}',
+      '.dcc-linkbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}',
+      '.dcc-linkbtn:disabled{opacity:.45;cursor:default;text-decoration:none}',
+      '.dcc-selected-count{font-size:12px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}',
     ].join('')
 
     ;(function ensureStyles() {
@@ -103,6 +110,9 @@ window.__ModuleLoader__.load({
         modeHintAll: '包括刚刚写入的缓存，删除后会在需要时自动重建。',
         recentKept: '近期写入 {size}，保留',
         zeroHint: '最近 7 天内没有可清理的缓存，近期写入的 {size} 会保留；切换到「全部缓存」可查看完整占用。',
+        selectAll: '全选',
+        deselectAll: '全不选',
+        selectedCount: '已选 {n}/{m} 项',
       },
       en: {
         nav: 'Cache cleaner',
@@ -134,6 +144,9 @@ window.__ModuleLoader__.load({
         modeHintAll: 'Includes caches written seconds ago; they are rebuilt on demand.',
         recentKept: '{size} written recently, kept',
         zeroHint: 'Nothing is old enough to clean: {size} written in the last week is kept. Switch to “Everything” to see the full footprint.',
+        selectAll: 'Select all',
+        deselectAll: 'Deselect all',
+        selectedCount: '{n}/{m} selected',
       },
     }
 
@@ -376,6 +389,24 @@ window.__ModuleLoader__.load({
           })
         }
 
+        function selectAll() {
+          setSelected(
+            new Set(
+              rows
+                .filter(function (row) {
+                  return row.bytes > 0
+                })
+                .map(function (row) {
+                  return row.id
+                }),
+            ),
+          )
+        }
+
+        function deselectAll() {
+          setSelected(new Set())
+        }
+
         function handleClean() {
           if (busy || loading) return
           var ids = selectedRows.map(function (row) {
@@ -547,6 +578,46 @@ window.__ModuleLoader__.load({
               },
               dict.modeAll,
             ),
+          ]),
+        )
+        var selectableRows = rows.filter(function (row) {
+          return row.bytes > 0
+        })
+        children.push(
+          h('div', { key: 'toolbar', className: 'dcc-toolbar' }, [
+            h(
+              'span',
+              { key: 'count', className: 'dcc-selected-count' },
+              fmt(dict.selectedCount, { n: selectedRows.length, m: selectableRows.length }),
+            ),
+            h('div', { key: 'bulk', className: 'dcc-toolbar-actions' }, [
+              h(
+                'button',
+                {
+                  key: 'select-all',
+                  type: 'button',
+                  className: 'dcc-linkbtn',
+                  onClick: selectAll,
+                  disabled:
+                    loading ||
+                    busy ||
+                    selectableRows.length === 0 ||
+                    selectedRows.length === selectableRows.length,
+                },
+                dict.selectAll,
+              ),
+              h(
+                'button',
+                {
+                  key: 'deselect-all',
+                  type: 'button',
+                  className: 'dcc-linkbtn',
+                  onClick: deselectAll,
+                  disabled: loading || busy || selectedRows.length === 0,
+                },
+                dict.deselectAll,
+              ),
+            ]),
           ]),
         )
         children.push(

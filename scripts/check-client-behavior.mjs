@@ -9,7 +9,7 @@
  * hand its click event to runScan() as the mode argument, so a rescan always
  * fell back to the 7-day filter.
  *
- * Run: node scripts/check-client-behavior.mjs
+ * Run: node tools/check-client-behavior.js
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -262,6 +262,21 @@ if (!entry) {
     }
     const allButton = buttonByText('全部缓存')
     if (allButton.props['data-active'] !== 'true') errors.push('"Everything" is not the initial mode')
+    if (!flattenText(tree).includes('已选 1/1')) {
+      errors.push('the initial selection count is wrong: ' + flattenText(tree).slice(0, 400))
+    }
+
+    // deselect all → nothing selected, the clean button is disabled
+    buttonByText('全不选').props.onClick()
+    await settle()
+    if (!flattenText(tree).includes('已选 0/1')) errors.push('deselect-all did not clear the selection')
+    const cleanButton = buttonByText('清理选中')
+    if (!cleanButton.props.disabled) errors.push('the clean button should be disabled with an empty selection')
+
+    // select all → everything selectable is selected again
+    buttonByText('全选').props.onClick()
+    await settle()
+    if (!flattenText(tree).includes('已选 1/1')) errors.push('select-all did not select every row with data')
 
     // switch to the 7-day filter
     buttonByText('仅 7 天前的').props.onClick()
@@ -273,6 +288,9 @@ if (!entry) {
     const weekText = flattenText(tree)
     if (!weekText.includes('近期写入')) errors.push('week-mode rows do not show the recently-written label')
     if (weekText.includes('无缓存')) errors.push('week-mode rows still show the empty label')
+    if (!weekText.includes('已选 0/0')) {
+      errors.push('week mode should report 0 of 0 selectable rows: ' + weekText.slice(0, 400))
+    }
 
     // rescan with a click event: the event must never become the mode
     buttonByText('重新扫描').props.onClick({ type: 'click' })
@@ -307,6 +325,6 @@ if (errors.length) {
 } else {
   console.log(
     `OK client behaviour: scans=${requests.length}, modes=${JSON.stringify(requests.map((r) => r.body.olderThanHours))}, ` +
-      'rescan keeps its mode, recent caches labelled',
+      'rescan keeps its mode, recent caches labelled, bulk selection works',
   )
 }

@@ -6,11 +6,11 @@
 
 DSH keeps a lot of derived data around: request images, session projection caches, prepared shells, Chromium caches, downloaded installers, plugin compile caches. None of it is user data, and all of it is rebuilt on demand — but it is scattered across the DSH home, the OS temp directory, the Electron userData directory and various plugin directories, which makes it easy to either leave gigabytes behind or delete the wrong thing.
 
-This plugin draws that line explicitly: a fixed, reviewable list of 13 cache targets, with a safety fence around the data that must never be deleted.
+This plugin draws that line explicitly: a fixed, reviewable list of 11 cache targets, with a safety fence around the data that must never be deleted.
 
 ## Features
 
-- **13 curated targets** in four groups — DSH core, temp spill, desktop client, plugin caches.
+- **11 curated targets** in four groups — DSH core, temp spill, desktop client, plugin caches.
 - **One implementation, three entry points** — the agent tools, the settings page and an HTTP route all call the same Host service.
 - **Two age policies** — only entries untouched for 7 days, or everything, plus a per-target default (temp targets keep the last 6 hours).
 - **Safe by construction** — allowlisted roots, protected subtrees, symlinks never followed, locked files reported instead of forced, dry run before delete.
@@ -100,12 +100,11 @@ The settings page opens in **Everything** mode so the inventory is always visibl
 
 ## What it cleans
 
-All 13 targets are pre-selected in the settings page; the whole set can be cleaned at once.
+The 11 targets are pre-selected in the settings page (only rows with data are selected by default), and the list has **Select all / Deselect all** buttons with an `n/m selected` count, so either the whole set or an explicit subset can be cleaned.
 
 | id | Group | Scope | Restart |
 | --- | --- | --- | --- |
 | `dsh-request-images` | DSH core | `~/.dsh/cache/attachments/request-images` | no |
-| `dsh-session-projections` | DSH core | `~/.dsh/storages/session_projcache` (rebuildable projections) | no |
 | `dsh-prepared-shells` | DSH core | `~/.dsh/dsh-ops/shells/niubash-prepared` (prepared-shell spill) | no |
 | `dsh-temp-subprocess` | Temp | `%TEMP%/dsh-subprocess-*` | no |
 | `dsh-temp-spill` | Temp | `%TEMP%/dsh-spill-*` | no |
@@ -115,19 +114,34 @@ All 13 targets are pre-selected in the settings page; the whole set can be clean
 | `dsh-electron-gpu-cache` | Desktop | GPU / shader caches (GrShaderCache, GPUCache, ShaderCache, Dawn*Cache) | yes |
 | `dsh-electron-logs` | Desktop | desktop client logs | no |
 | `dsh-updater-cache` | Desktop | downloaded installers / blockmaps | no |
-| `dsh-plugin-context-overview` | Plugins | billion-context overview cache | no |
-| `dsh-plugin-cc-safety-net` | Plugins | cc-safety-net compile cache + logs | no |
+| `plugin-caches` | Plugins | caches discovered from the active profile — see below | no |
 
 Desktop client and updater rows refer to the standard Electron userData and updater locations; on a platform where those directories do not exist the rows simply stay empty.
 
+### Plugin caches
+
+Every machine installs a different set of plugins, so this row is not a fixed list. It is discovered at scan time from the active profile (`DSH_PROFILE_DIR`):
+
+1. **Declared caches** — a plugin may add `dsh.cache` to its `package.json`, either as a string, an array, or `{ "path": …, "mode": "contents" | "entry" }`. Paths may be absolute, start with `~`, or be relative to the plugin's data directory. Declared paths must be subdirectories of that plugin's own data roots (`~/.<name>`, `%LOCALAPPDATA%/<name>`, `%LOCALAPPDATA%/dsh-<name>`, `<DSH_HOME>/<name>`); anything inside the installed package, or elsewhere, is refused.
+2. **Conventional caches** — directories named `cache`, `.cache`, `compile-cache`, `logs` or `tmp` directly inside those same data roots.
+
+```json
+{
+  "name": "my-plugin",
+  "dsh": { "cache": ["~/.my-plugin/cache", { "path": "tmp/thumbs", "mode": "contents" }] }
+}
+```
+
+Discovery is best-effort: a plugin that keeps data somewhere unusual stays invisible to the cleaner rather than being guessed at. `pluginCacheDiscovery: false` restricts the row to declared paths only, and `pluginCacheExtraPaths` adds explicit extra locations.
+
 ## Safety model
 
-- **Only declared roots are touched:** the DSH home, the OS temp directory, the desktop client userData directory, the updater directory and `~/.cc-safety-net`.
+- **Only declared roots are touched:** the DSH home, the OS temp directory, the desktop client userData directory, the updater directory (its contents only), and per-plugin data roots under the home directory or `%LOCALAPPDATA%`.
 - **Never touched:** `sessions/`, `attachments/`, `profiles/`, `rewind-snapshots/`, `llm-deepseek/`, `dsh-runtimes/`, `skills/`, `credentials/`, and the client's Local Storage / Session Storage / Network / IndexedDB / cookies.
 - **Symlinks are never followed.**
 - **Age-aware by default:** under the per-target policy, files newer than the stale cutoff (6 h, configurable) are skipped; "7 days" widens the cutoff to 168 h and "Everything" removes the age filter entirely.
-- **Locked files are reported, not forced:** a busy file is retried once and then listed as `skipped`.
-- **Installed plugins' `node_modules` are not caches** and are never deleted.
+- **Locked files are reported, not forced:** a busy file is retried a few times (80 ms, 200 ms) and then listed as `skipped`.
+- **Installed plugins' `node_modules` are not caches** and are never deleted; a discovered plugin cache must live outside the installed package.
 - **Dry run first:** `cache_clean { dryRun: true }` previews without deleting.
 
 ## Configuration
@@ -138,6 +152,8 @@ Desktop client and updater rows refer to the standard Electron userData and upda
 | --- | --- | --- |
 | `staleHours` | `6` | cutoff used by targets whose `staleHours` is `'config'` (temp/spill targets) |
 | `targets` | all | id allowlist, for embeddings and custom setups |
+| `pluginCacheDiscovery` | `true` | scan conventional cache directories next to each installed plugin's data roots |
+| `pluginCacheExtraPaths` | `[]` | extra absolute or `~` paths to include in the `plugin-caches` row |
 
 The bundle row created by the patch passes its `config` object straight through, e.g.:
 
@@ -153,6 +169,8 @@ The bundle row created by the patch passes its `config` object straight through,
 
 ```
 lib/targets.js   declarative target registry (groups, bilingual titles, paths, modes, restart flags)
+lib/paths.js     every location constant in one place (allowed roots, protected roots, cleanable roots)
+lib/plugin-caches.js  discovers per-plugin caches from the active profile (declared `dsh.cache` + conventional dirs)
 lib/cleaner.js   scan/clean engine: allowlist + protected fences, age policy, walk/measure/delete, reporting
 lib/index.js     Host plugin: Config-free ESM entry, agent tools, trust-fenced HTTP route
 client/client.js single client bundle: settings page + nav icon (React, no JSX, theme tokens only)
