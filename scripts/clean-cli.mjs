@@ -80,7 +80,10 @@ console.log(`${result.totals.removedFiles} files · ${result.totals.removedDirs}
 for (const row of result.targets) {
   if (!row.units && !row.errors.length) continue
   console.log(`  ${row.id.padEnd(28)} ${humanBytes(row.freedBytes).padStart(9)}`)
-  if (row.locked) console.log('    held open by a running process — quit the client and run again')
-  for (const error of row.errors.slice(0, 3)) console.log(`    ${error.code}: ${error.message}`)
+  if (row.locked) console.log('    held open by the running client — quit it and run again')
+  for (const error of row.errors.slice(0, 3)) {
+    if (error.locked) continue
+    console.log(`    ${error.code}: ${error.message}`)
+  }
 }
 if (result.totals.skipped > 0) process.exitCode = 1

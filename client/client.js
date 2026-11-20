@@ -99,6 +99,7 @@ window.__ModuleLoader__.load({
         errorsBadge: '{n} 个错误',
         reportOk: '已释放 {size}，删除 {n} 个文件',
         reportSkipped: '跳过 {n} 项（可能被占用）',
+        reportLocked: '被客户端占用 {n} 项，关闭客户端后重试',
         reportErrors: '{n} 个错误',
         loading: '正在读取缓存清单…',
         none: '当前没有可清理的缓存。',
@@ -134,6 +135,7 @@ window.__ModuleLoader__.load({
         errorsBadge: '{n} errors',
         reportOk: 'Freed {size}, removed {n} files',
         reportSkipped: '{n} entries skipped (likely in use)',
+        reportLocked: '{n} held open by the client — quit it and retry',
         reportErrors: '{n} errors',
         loading: 'Reading the cache inventory…',
         none: 'There is nothing to clean right now.',
@@ -457,6 +459,16 @@ window.__ModuleLoader__.load({
             })
         }
 
+        function readErrorsList(list) {
+          return (list || []).filter(function (entry) {
+            return !entry || entry.locked !== true
+          })
+        }
+
+        function readErrors(row) {
+          return readErrorsList(row && row.errors)
+        }
+
         function renderRow(row) {
           var empty = row.bytes === 0
           var badges = []
@@ -465,7 +477,8 @@ window.__ModuleLoader__.load({
           if (row.staleHours === WEEK_HOURS) badges.push(dict.staleWeek)
           else if (row.staleHours != null) badges.push(fmt(dict.staleOnly, { h: row.staleHours }))
           if (row.fresh) badges.push(fmt(dict.skippedFresh, { n: row.fresh }))
-          if (row.errors && row.errors.length) badges.push(fmt(dict.errorsBadge, { n: row.errors.length }))
+          var rowErrors = readErrors(row)
+          if (rowErrors.length) badges.push(fmt(dict.errorsBadge, { n: rowErrors.length }))
           return h(
             'label',
             {
@@ -670,12 +683,19 @@ window.__ModuleLoader__.load({
               n: report.totals.removedFiles,
             }),
           ]
+          var failures = readErrorsList(report.errors)
+          var lockedCount = (report.targets || []).filter(function (row) {
+            return row.locked
+          }).length
           if (report.totals.skipped) parts.push(fmt(dict.reportSkipped, { n: report.totals.skipped }))
-          if (report.errors && report.errors.length) {
-            parts.push(fmt(dict.reportErrors, { n: report.errors.length }))
-          }
+          if (lockedCount) parts.push(fmt(dict.reportLocked, { n: lockedCount }))
+          if (failures.length) parts.push(fmt(dict.reportErrors, { n: failures.length }))
           children.push(
-            h('div', { key: 'report', className: 'dcc-banner', 'data-tone': 'ok' }, parts.join(' · ')),
+            h(
+              'div',
+              { key: 'report', className: 'dcc-banner', 'data-tone': failures.length ? 'error' : 'ok' },
+              parts.join(' · '),
+            ),
           )
         }
         if (confirm) {
