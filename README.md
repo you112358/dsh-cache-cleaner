@@ -118,6 +118,12 @@ The 11 targets are pre-selected in the settings page (only rows with data are se
 
 Desktop client and updater rows refer to the standard Electron userData and updater locations; on a platform where those directories do not exist the rows simply stay empty.
 
+Chromium keeps its network cache journal open while the desktop client runs, so that row cannot be emptied from inside the client itself: it reports `in use` and keeps the file instead of pretending success. Quit the client and run the terminal helper to reclaim it — the cache is rebuilt on demand.
+
+```bash
+node scripts/clean-cli.mjs dsh-electron-http-cache --all
+```
+
 ### Plugin caches
 
 Every machine installs a different set of plugins, so this row is not a fixed list. It is discovered at scan time from the active profile (`DSH_PROFILE_DIR`):
@@ -185,6 +191,8 @@ The engine is pure Node (no Cordis, no schemastery) so it can be unit-tested and
 node --check client/client.js                 # bundle syntax
 node -e "import('./lib/index.js').then(m=>console.log(m.name, m.inject))"   # Host half loads
 node scripts/check-client.mjs                 # structural check of the client bundle (no browser)
+node scripts/clean-cli.mjs --dry-run          # list every target and preview
+node scripts/clean-cli.mjs dsh-temp-spill --all # clean specific ids
 ```
 
 `scripts/check-client.mjs` evaluates the bundle in a `vm` sandbox with stubbed `window.__ModuleLoader__`, `document` and `require('react')`, calls the factory, runs `apply()` against a fake client context and asserts the registered slots, section id/order, style claiming and a zh render. CI runs the same checks on Node 22.

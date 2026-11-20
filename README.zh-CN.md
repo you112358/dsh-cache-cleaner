@@ -118,6 +118,12 @@ POST /dsh-cache-cleaner/api/clean  { "ids": string[], "dryRun"?: boolean, "older
 
 桌面客户端与更新器两行指向标准 Electron userData / updater 位置；目录不存在的平台上这些行显示为空，而不是去猜路径。
 
+桌面客户端运行期间，Chromium 会一直占用网络缓存的 journal 文件，因此这一行无法在客户端内部清掉：行内会明确显示`被客户端占用` 并保留文件，而不是假装清空。关闭客户端后用终端助手清理即可，缓存之后会按需重建。
+
+```bash
+node scripts/clean-cli.mjs dsh-electron-http-cache --all
+```
+
 ### 插件缓存（自动发现）
 
 每台机器安装的插件不同，所以这一行不是固定列表，而是在扫描时从当前 profile（`DSH_PROFILE_DIR`）现场发现：
@@ -183,6 +189,8 @@ locale/*.json    插件管理器展示用的标题/描述
 node --check client/client.js                  # bundle 语法
 node -e "import('./lib/index.js').then(m=>console.log(m.name, m.inject))"   # Host 半边可加载
 node scripts/check-client.mjs                  # client bundle 结构自检（无需浏览器）
+node scripts/clean-cli.mjs --dry-run           # 列出全部目标并预览
+node scripts/clean-cli.mjs dsh-temp-spill --all # 清理指定目标
 ```
 
 `scripts/check-client.mjs` 在 `vm` 沙箱里用假的 `window.__ModuleLoader__`、`document`、`require('react')` 求值 bundle，调用 factory，再以伪造的 client context 跑 `apply()`，断言槽位注册、section id/order、样式归属与中文渲染。CI 在 Node 22 上运行同样的检查。

@@ -86,6 +86,7 @@ window.__ModuleLoader__.load({
         total: '可清理 {size}，共 {n} 项',
         hint: '只清理可重建的缓存与临时文件：会话记录、附件、回滚快照与插件安装文件不会被改动。',
         rescan: '重新扫描',
+  lockedNote: '被客户端占用，关闭后重试',
         rescanning: '扫描中…',
         cleanSelected: '清理选中（{size}）',
         cleaning: '清理中…',
@@ -120,6 +121,7 @@ window.__ModuleLoader__.load({
         total: '{size} reclaimable across {n} targets',
         hint: 'Only rebuildable caches and temporary files are cleaned. Session logs, attachments, rewind snapshots and plugin installations are never touched.',
         rescan: 'Rescan',
+  lockedNote: 'in use by the client — quit it to clean',
         rescanning: 'Scanning…',
         cleanSelected: 'Clean selected ({size})',
         cleaning: 'Cleaning…',
@@ -305,6 +307,12 @@ window.__ModuleLoader__.load({
         var report = reportState[0]
         var setReport = reportState[1]
 
+        var lockedState = React.useState(function () {
+          return new Set()
+        })
+        var locked = lockedState[0]
+        var setLocked = lockedState[1]
+
         var confirmState = React.useState(false)
         var confirm = confirmState[0]
         var setConfirm = confirmState[1]
@@ -421,12 +429,24 @@ window.__ModuleLoader__.load({
           setBusy(true)
           setError(null)
           setReport(null)
+          setLocked(new Set())
           post('clean', {
             ids: ids,
             olderThanHours: mode === 'all' ? null : WEEK_HOURS,
           })
             .then(function (value) {
               setReport(value)
+              setLocked(
+                new Set(
+                  (value.targets || [])
+                    .filter(function (row) {
+                      return row.locked
+                    })
+                    .map(function (row) {
+                      return row.id
+                    }),
+                ),
+              )
               return runScan()
             })
             .catch(function (failure) {
@@ -441,6 +461,7 @@ window.__ModuleLoader__.load({
           var empty = row.bytes === 0
           var badges = []
           if (row.restart) badges.push(dict.needRestart)
+          if (!empty && locked.has(row.id)) badges.push(dict.lockedNote)
           if (row.staleHours === WEEK_HOURS) badges.push(dict.staleWeek)
           else if (row.staleHours != null) badges.push(fmt(dict.staleOnly, { h: row.staleHours }))
           if (row.fresh) badges.push(fmt(dict.skippedFresh, { n: row.fresh }))
