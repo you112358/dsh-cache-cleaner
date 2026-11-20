@@ -10,10 +10,9 @@
  *
  * Run: node tools/check-safety.js
  */
-import os from 'node:os'
 import path from 'node:path'
 import { isSafePath } from '../lib/cleaner.js'
-import { DSH_HOME, HOME_DIR, TEMP_DIR, UPDATER_DATA } from '../lib/paths.js'
+import { DSH_HOME, HOME_DIR, LOCAL_APP_DATA, TEMP_DIR, UPDATER_DATA } from '../lib/paths.js'
 
 const failures = []
 
@@ -46,7 +45,7 @@ expect('outside declared', isSafePath(outsideOfHome, 'contents', true), false)
 
 // Discovered plugin caches live next to the plugin data, inside the user's dirs.
 expect('declared home cache', isSafePath(path.join(HOME_DIR, '.demo-plugin', 'logs'), 'contents', true), true)
-expect('declared local cache', isSafePath(path.join(os.tmpdir(), 'demo'), 'contents', true), true)
+expect('declared local cache', isSafePath(path.join(LOCAL_APP_DATA, 'demo'), 'contents', true), true)
 
 if (failures.length) {
   console.error('FAIL safety fence')
