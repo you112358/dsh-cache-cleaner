@@ -1,6 +1,6 @@
 {
   "name": "dsh-cache-cleaner",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "扫描并清理 DeepSeek Harness 本体、桌面客户端与各插件可重建的缓存，释放磁盘占用，不改动会话、附件与插件安装。",
