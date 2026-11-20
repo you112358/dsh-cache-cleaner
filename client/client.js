@@ -98,7 +98,6 @@ window.__ModuleLoader__.load({
         skippedFresh: '跳过 {n} 项较新',
         errorsBadge: '{n} 个错误',
         reportOk: '已释放 {size}，删除 {n} 个文件',
-        reportSkipped: '跳过 {n} 项（可能被占用）',
         reportLocked: '被客户端占用 {n} 项，关闭客户端后重试',
         reportErrors: '{n} 个错误',
         loading: '正在读取缓存清单…',
@@ -134,7 +133,6 @@ window.__ModuleLoader__.load({
         skippedFresh: '{n} newer skipped',
         errorsBadge: '{n} errors',
         reportOk: 'Freed {size}, removed {n} files',
-        reportSkipped: '{n} entries skipped (likely in use)',
         reportLocked: '{n} held open by the client — quit it and retry',
         reportErrors: '{n} errors',
         loading: 'Reading the cache inventory…',
@@ -687,7 +685,6 @@ window.__ModuleLoader__.load({
           var lockedCount = (report.targets || []).filter(function (row) {
             return row.locked
           }).length
-          if (report.totals.skipped) parts.push(fmt(dict.reportSkipped, { n: report.totals.skipped }))
           if (lockedCount) parts.push(fmt(dict.reportLocked, { n: lockedCount }))
           if (failures.length) parts.push(fmt(dict.reportErrors, { n: failures.length }))
           children.push(
