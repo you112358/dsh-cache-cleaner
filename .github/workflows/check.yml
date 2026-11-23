@@ -33,3 +33,5 @@ jobs:
         run: node scripts/check-plugin-caches.mjs
       - name: Real cleanup check
         run: node scripts/check-clean-real.mjs
+      - name: Plugin leftover discovery check
+        run: node scripts/check-leftovers.mjs

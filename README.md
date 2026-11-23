@@ -6,11 +6,11 @@
 
 DSH keeps a lot of derived data around: request images, session projection caches, prepared shells, Chromium caches, downloaded installers, plugin compile caches. None of it is user data, and all of it is rebuilt on demand — but it is scattered across the DSH home, the OS temp directory, the Electron userData directory and various plugin directories, which makes it easy to either leave gigabytes behind or delete the wrong thing.
 
-This plugin draws that line explicitly: a fixed, reviewable list of 11 cache targets, with a safety fence around the data that must never be deleted.
+This plugin draws that line explicitly: a fixed, reviewable list of 12 cache targets, with a safety fence around the data that must never be deleted.
 
 ## Features
 
-- **11 curated targets** in four groups — DSH core, temp spill, desktop client, plugin caches.
+- **12 curated targets** in four groups — DSH core, temp spill, desktop client, plugin caches and uninstall leftovers.
 - **One implementation, three entry points** — the agent tools, the settings page and an HTTP route all call the same Host service.
 - **Two age policies** — only entries untouched for 7 days, or everything, plus a per-target default (temp targets keep the last 6 hours).
 - **Safe by construction** — allowlisted roots, protected subtrees, symlinks never followed, locked files reported instead of forced, dry run before delete.
@@ -100,7 +100,7 @@ The settings page opens in **Everything** mode so the inventory is always visibl
 
 ## What it cleans
 
-The 11 targets are pre-selected in the settings page (only rows with data are selected by default), and the list has **Select all / Deselect all** buttons with an `n/m selected` count, so either the whole set or an explicit subset can be cleaned.
+Every target except the uninstall leftovers is pre-selected in the settings page (only rows with data are selected by default), and the list has **Select all / Deselect all** buttons with an `n/m selected` count, so either the whole set or an explicit subset can be cleaned.
 
 | id | Group | Scope | Restart |
 | --- | --- | --- | --- |
@@ -115,6 +115,7 @@ The 11 targets are pre-selected in the settings page (only rows with data are se
 | `dsh-electron-logs` | Desktop | desktop client logs | no |
 | `dsh-updater-cache` | Desktop | downloaded installers / blockmaps | no |
 | `plugin-caches` | Plugins | caches discovered from the active profile — see below | no |
+| `plugin-leftovers` | Plugins | data left by plugins that are no longer installed — see below (opt-in, default off) | no |
 
 Desktop client and updater rows refer to the standard Electron userData and updater locations; on a platform where those directories do not exist the rows simply stay empty.
 
@@ -140,6 +141,15 @@ Every machine installs a different set of plugins, so this row is not a fixed li
 
 Discovery is best-effort: a plugin that keeps data somewhere unusual stays invisible to the cleaner rather than being guessed at. `pluginCacheDiscovery: false` restricts the row to declared paths only, and `pluginCacheExtraPaths` adds explicit extra locations.
 
+### Plugin uninstall leftovers
+
+Uninstalling a plugin removes its package, not necessarily the data it wrote. The `plugin-leftovers` row reports:
+
+1. **Recorded roots** — while a plugin is installed the cleaner remembers the data roots it owns in `<DSH_HOME>/storages/dsh-cache-cleaner/plugin-roots.json`; the catalog is refreshed every time the row is scanned (and only packages that declare a DSH manifest count as plugins, so hoisted libraries never claim a global directory). After the plugin disappears those roots are reported even when their name no longer matches any package.
+2. **Convention scan** — plugin-shaped entries under `<DSH_HOME>/storages/`, `<DSH_HOME>/telemetry/`, `<DSH_HOME>/dsh-*` and `%LOCALAPPDATA%/dsh-*` that no installed plugin claims.
+
+The row starts unchecked, and every candidate is listed with its own path so it can be inspected before deleting. `pluginLeftoverDiscovery: false` limits the row to recorded roots; `pluginLeftoverExtraPaths` adds explicit extra directories. Candidates whose newest file is younger than `pluginLeftoverMinAgeHours` (default 24) are skipped, so a plugin that is still writing — for example one loaded from a development directory — is never mistaken for an uninstall leftover.
+
 ## Safety model
 
 - **Only declared roots are touched:** the DSH home, the OS temp directory, the desktop client userData directory, the updater directory (its contents only), and per-plugin data roots under the home directory or `%LOCALAPPDATA%`.
@@ -148,6 +158,7 @@ Discovery is best-effort: a plugin that keeps data somewhere unusual stays invis
 - **Age-aware by default:** under the per-target policy, files newer than the stale cutoff (6 h, configurable) are skipped; "7 days" widens the cutoff to 168 h and "Everything" removes the age filter entirely.
 - **Locked files are reported, not forced:** a busy file is retried a few times (80 ms, 200 ms) and then listed as `skipped`.
 - **Installed plugins' `node_modules` are not caches** and are never deleted; a discovered plugin cache must live outside the installed package.
+- **Uninstall leftovers are opt-in:** they are reported, never pre-selected, live only in the user home / `%LOCALAPPDATA%` / DSH home, and are deleted only when that row is explicitly selected.
 - **Dry run first:** `cache_clean { dryRun: true }` previews without deleting.
 
 ## Configuration
@@ -160,6 +171,9 @@ Discovery is best-effort: a plugin that keeps data somewhere unusual stays invis
 | `targets` | all | id allowlist, for embeddings and custom setups |
 | `pluginCacheDiscovery` | `true` | scan conventional cache directories next to each installed plugin's data roots |
 | `pluginCacheExtraPaths` | `[]` | extra absolute or `~` paths to include in the `plugin-caches` row |
+| `pluginLeftoverDiscovery` | `true` | convention scan for plugin uninstall leftovers; `false` keeps only roots recorded in the ledger |
+| `pluginLeftoverExtraPaths` | `[]` | extra absolute or `~` directories treated as leftovers |
+| `pluginLeftoverMinAgeHours` | `24` | skip leftover candidates written within this many hours; `0` disables the guard |
 
 The bundle row created by the patch passes its `config` object straight through, e.g.:
 
@@ -177,6 +191,7 @@ The bundle row created by the patch passes its `config` object straight through,
 lib/targets.js   declarative target registry (groups, bilingual titles, paths, modes, restart flags)
 lib/paths.js     every location constant in one place (allowed roots, protected roots, cleanable roots)
 lib/plugin-caches.js  discovers per-plugin caches from the active profile (declared `dsh.cache` + conventional dirs)
+lib/leftovers.js      finds data directories of plugins that are no longer installed (ledger + convention scan)
 lib/cleaner.js   scan/clean engine: allowlist + protected fences, age policy, walk/measure/delete, reporting
 lib/index.js     Host plugin: Config-free ESM entry, agent tools, trust-fenced HTTP route
 client/client.js single client bundle: settings page + nav icon (React, no JSX, theme tokens only)

@@ -49,6 +49,10 @@ window.__ModuleLoader__.load({
       '.dcc-size{font-size:12px;color:var(--dsw-alias-label-secondary);white-space:nowrap;font-variant-numeric:tabular-nums}',
       '.dcc-path{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}',
       '.dcc-note{font-size:12px;line-height:1.55;color:var(--dsw-alias-label-secondary)}',
+      '.dcc-locations{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:2px}',
+      '.dcc-location{display:flex;align-items:baseline;gap:8px;font-size:11px;line-height:1.5;color:var(--dsw-alias-label-secondary);overflow:hidden}',
+      '.dcc-locpath{flex:1 1 auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dcc-locsize{flex:0 0 auto;white-space:nowrap}',
       '.dcc-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}',
       '.dcc-badge{font-size:10px;line-height:1.5;padding:1px 6px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);white-space:nowrap}',
       '.dcc-foot{margin:0;font-size:11px;line-height:1.6;color:var(--dsw-alias-label-secondary)}',
@@ -510,6 +514,31 @@ window.__ModuleLoader__.load({
                 ]),
                 row.pathLabel
                   ? h('code', { key: 'path', className: 'dcc-path', title: row.pathLabel }, row.pathLabel)
+                  : null,
+                row.locations && row.locations.length > 1 && row.id.indexOf('plugin-') === 0
+                  ? h(
+                      'ul',
+                      { key: 'locations', className: 'dcc-locations' },
+                      row.locations
+                        .slice(0, 6)
+                        .map(function (location, index) {
+                          return h('li', { key: 'loc' + index, className: 'dcc-location' }, [
+                            h('code', { key: 'p', className: 'dcc-locpath', title: location.path }, location.path),
+                            h('span', { key: 's', className: 'dcc-locsize' }, humanBytes(location.bytes)),
+                          ])
+                        })
+                        .concat(
+                          row.locations.length > 6
+                            ? [
+                                h(
+                                  'li',
+                                  { key: 'more', className: 'dcc-location' },
+                                  '…+' + String(row.locations.length - 6),
+                                ),
+                              ]
+                            : [],
+                        ),
+                    )
                   : null,
                 h('span', { key: 'note', className: 'dcc-note' }, row.note[lang]),
                 badges.length

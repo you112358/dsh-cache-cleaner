@@ -51,13 +51,36 @@ function scanPayload(olderThanHours) {
         pathCount: 1,
         errors: [],
       },
+      {
+        id: 'plugin-leftovers',
+        group: 'dsh',
+        title: { zh: '插件卸载残留', en: 'Plugin leftovers' },
+        note: { zh: '核对后清理', en: 'review before cleaning' },
+        defaultOn: false,
+        restart: false,
+        staleHours: week ? 168 : null,
+        bytes: week ? 0 : 2048,
+        files: week ? 0 : 3,
+        units: week ? 0 : 2,
+        fresh: week ? 2 : 0,
+        freshBytes: week ? 2048 : 0,
+        freshFiles: week ? 3 : 0,
+        skipped: 0,
+        pathLabel: 'C:/ghost-a (+1)',
+        pathCount: 2,
+        locations: [
+          { path: 'C:/ghost-a', mode: 'entry', bytes: week ? 0 : 1024, files: week ? 0 : 1 },
+          { path: 'C:/ghost-b', mode: 'entry', bytes: week ? 0 : 1024, files: week ? 0 : 2 },
+        ],
+        errors: [],
+      },
     ],
     totals: {
-      bytes,
-      files: week ? 0 : 2,
-      freshBytes: week ? 1024 : 0,
-      freshFiles: week ? 2 : 0,
-      targets: week ? 0 : 1,
+      bytes: week ? 0 : 6144,
+      files: week ? 0 : 5,
+      freshBytes: week ? 3072 : 0,
+      freshFiles: week ? 5 : 0,
+      targets: week ? 0 : 2,
     },
   }
 }
@@ -262,21 +285,25 @@ if (!entry) {
     }
     const allButton = buttonByText('全部缓存')
     if (allButton.props['data-active'] !== 'true') errors.push('"Everything" is not the initial mode')
-    if (!flattenText(tree).includes('已选 1/1')) {
+    if (!flattenText(tree).includes('已选 1/2')) {
       errors.push('the initial selection count is wrong: ' + flattenText(tree).slice(0, 400))
+    }
+    const initialText = flattenText(tree)
+    if (!initialText.includes('C:/ghost-a') || !initialText.includes('C:/ghost-b')) {
+      errors.push('discovered leftover locations are not listed: ' + initialText.slice(0, 600))
     }
 
     // deselect all → nothing selected, the clean button is disabled
     buttonByText('全不选').props.onClick()
     await settle()
-    if (!flattenText(tree).includes('已选 0/1')) errors.push('deselect-all did not clear the selection')
+    if (!flattenText(tree).includes('已选 0/2')) errors.push('deselect-all did not clear the selection')
     const cleanButton = buttonByText('清理选中')
     if (!cleanButton.props.disabled) errors.push('the clean button should be disabled with an empty selection')
 
     // select all → everything selectable is selected again
     buttonByText('全选').props.onClick()
     await settle()
-    if (!flattenText(tree).includes('已选 1/1')) errors.push('select-all did not select every row with data')
+    if (!flattenText(tree).includes('已选 2/2')) errors.push('select-all did not select every row with data')
 
     // switch to the 7-day filter
     buttonByText('仅 7 天前的').props.onClick()
